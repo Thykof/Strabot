@@ -1,0 +1,7 @@
+private.py
+data/
+examples/
+__pycache__/
+*.log
+test/test_client.py
+.pytest_cache
