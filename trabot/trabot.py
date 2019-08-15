@@ -1,23 +1,28 @@
+import time
+import sys
 import atexit
 
 
+from hitbtc import HitBTC
+
+
 from trabot.client import Client
-from private import auth
-from trabot.utils import *
-from trabot.stream import *
+from trabot import utils
+from trabot.utils import tell
+from trabot import stream
 
 
-def algo():
+def algo_(auth):
     """Trading bot algorithm.
     It simulate the orders.
     """
     print("Start algo")
-    url_api = 'https://api.hitbtc.com/api/2/'
-    symbol_code = 'ETHBTC'
+    # url_api = 'https://api.hitbtc.com/api/2/'
+    symbol_code = 'DOGEBTC'
     client = Client("https://api.hitbtc.com", auth[0], auth[1])
 
-    stream = HitBTC()
-    stream.start()  # start the websocket connection
+    hitbtc = HitBTC()
+    hitbtc.start()  # start the websocket connection
     time.sleep(0.25)  # Give the socket some time to connect
     # Varaibles:
     orders = dict()
@@ -29,14 +34,14 @@ def algo():
 
     # Algo:
     eth_btc = client.get_symbol(symbol_code)
-    nb_dec = len(str(eth_btc['tickSize']).split('.')[1])
+    # nb_dec = len(str(eth_btc['tickSize']).split('.')[1])
     orderbook = client.get_orderbook(symbol_code)
     # calculate average bid:
     bids = list()
     for price in orderbook['bid']:
         bids.append(float(price['price']))
     print(len(bids))
-    average_bid = average(bids)
+    average_bid = utils.average(bids)
 
     #buy_price = round(float(orderbook['bid'][0]['price']) - 0.001 * float(orderbook['bid'][0]['price']), nb_dec)
     buy_price = average_bid - 0.001 * average_bid
@@ -53,7 +58,7 @@ def algo():
     orders['buy'].append((quantity, buy_price))
     # waiting for the defined buy_price:
     tell('waiting for ' + str(buy_price))
-    response = wait_for(stream, buy_price)
+    response = stream.wait_for(hitbtc, buy_price)
     # this simulate that the order get filled
     if 'timeout' in response:
         tell('timeout')
@@ -64,10 +69,10 @@ def algo():
         # SELL
         # define sell_price:
         sell_price, profit_sell = client.find_profitable_price(eth_btc, buy_price, quantity, 'sell')
-        earn, profit_buy, fees = client.estimate_profit(eth_btc, quantity, sell_price, buy_price, side='long', type='tt')
+        earn, profit_buy, fees = client.estimate_profit(eth_btc, quantity, sell_price, buy_price, side='long', type_='tt')
         # wait for sell price:
         tell('waiting for ' + str(sell_price))
-        wait_for(stream, sell_price, 'ask')
+        stream.wait_for(hitbtc, sell_price, 'ask')
 
         #client.open_order('sell', sell_price, quantity)
         tell('open sell order')
@@ -78,7 +83,7 @@ def algo():
         buy_price, profit_buy = client.find_profitable_price(eth_btc, sell_price, quantity, 'buy')
         # wait for sell price:
         tell('waiting for ' + str(buy_price))
-        wait_for(stream, buy_price)
+        stream.wait_for(hitbtc, buy_price)
         # sell at buy_price:
         #client.open_order('buy', buy_price, quantity)
         tell('open buy order')
@@ -93,7 +98,7 @@ def algo():
         tell('sell profit: ' + str(profit_sell))
 
     #stream.stop()
-    atexit.register(goodbye, orders, profit)
+    atexit.register(utils.goodbye, orders, profit)
 
     # get orderbook
     # define a price

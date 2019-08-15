@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 from scipy.fftpack import fft, fftfreq
 
 
-from trabot.stream import *
-from trabot.utils import *
+from trabot import stream
+from trabot import utils
 
 
 def fft_plot():
@@ -18,17 +18,17 @@ def fft_plot():
     print("Start fft")
     if len(sys.argv) == 2:
         n_seq = int(sys.argv[1])
-        steps, prices = get_seq(n_seq=n_seq)
+        steps, prices = stream.get_seq(n_seq=n_seq)
         print(steps)
         print(prices)
         if steps == [] and prices == []:
             print('no data')
             return
-        save_seq(prices, steps, 'data/seq')
+        stream.save_seq(prices, steps, 'data/seq')
     else:
-        steps, prices = read_seq('data/seq-1')
+        steps, prices = stream.read_seq('data/seq-1')
 
-    fe = 1.0/average(steps)  # Hz
+    fe = 1.0 / utils.average(steps)  # Hz
     prices_fft = abs(fft(prices))
     prices_freq = fftfreq(len(prices), 1.0/fe)
 

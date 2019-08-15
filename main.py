@@ -1,21 +1,20 @@
-import time
-import queue
 from os import path, mkdir
 
 
-from hitbtc import HitBTC
-
-
-from trabot.fft import fft_plot
-from trabot.trabot import algo
+# from trabot.fft import fft_plot
+# from trabot import trabot
+from trabot import trader
+# from trabot import stream
 
 
 if not path.exists('data'):
     mkdir('data')
 
 def main():
-    fft_plot()
-    algo()
+    trader.main()
+    # stream.main()
+    # fft_plot()
+    # trabot.algo()
 
 
 if __name__ == "__main__":

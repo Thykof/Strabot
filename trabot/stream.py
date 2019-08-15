@@ -5,6 +5,63 @@ import queue
 from hitbtc import HitBTC
 
 
+from trabot import utils
+from private import auth
+
+
+class WebSocketAPI(HitBTC):
+    def __init__(self, auth):
+        HitBTC.__init__(self, auth[0], auth[1])
+        self.start()
+        time.sleep(2)
+        # self.login(basic=True)
+
+    def subscribe(self, name, option=None):
+        if name == 'ticker':
+            self.subscribe_ticker(symbol=name)
+
+    def listen(self, timeout=5):
+        b = time.time()
+        while True:
+            try:
+                data = self.recv()
+                print(data)
+            except queue.Empty:
+                print('none')
+                continue
+            else:
+                print(data)
+            finally:
+                if time.time() - b > timeout:
+                    break
+
+def main():
+    c = HitBTC()
+    c.start()  # start the websocket connection
+    time.sleep(10)  # Give the socket some time to connect
+    c.subscribe_ticker(symbol='ETHBTC') # Subscribe to ticker data for the pair ETHBTC
+
+    while True:
+        try:
+            data = c.recv()
+        except queue.Empty:
+            continue
+        print(data)
+
+        # process data from websocket
+        ...
+
+    c.stop()
+    print('go')
+    w = WebSocketAPI(auth)
+    print('subscribe')
+    w.subscribe('DOGEBTC')
+    print('subscribed')
+    w.listen()
+    print('stop')
+    w.stop()
+
+
 def wait_for(stream, target, timeout=60, side='bid'):
     """Wait for a price (target).
     return type: str
@@ -16,14 +73,13 @@ def wait_for(stream, target, timeout=60, side='bid'):
         except queue.Empty:
             continue
         else:
-            tell(data[2][side])
+            utils.tell(data[2][side])
             price = data[2][side]
             if float(price) <= target:
                 return price
-            elif (time.time() - begin) >= timeout:
-                return 'timeout'
+            return 'timeout'
 
-def price_average(stream, period=20):
+def price_average(stream, side, period=20):
     """Return the average price during the given period.
     Currently not used.
     """
@@ -36,10 +92,10 @@ def price_average(stream, period=20):
             continue
         else:
             price = data[2][side]
-            tell(price)
+            utils.tell(price)
             prices.append(price)
             if (time.time() - begin) >= period:
-                return average(prices)
+                return utils.average(prices)
 
 def demo():
     """Recieve ticker and print results.
@@ -81,8 +137,7 @@ def get_seq(delta=-1, n_seq=-1):
     time.sleep(0.25)  # Give the socket some time to connect
     # Subscribe to ticker data for the pair ETHBTC:
     print('Subscribe')
-    response = stream.subscribe_ticker(symbol='ETHBTC')
-    print(response)
+    stream.subscribe_ticker(symbol='ETHBTC')
     response = stream.recv() # the first value is different
     print(response)
 

@@ -3,7 +3,7 @@ import uuid
 import time
 import requests
 
-from trabot.utils import trunc
+from trabot import utils
 
 class Client(object):
     def __init__(self, url, public_key, secret):
@@ -20,7 +20,18 @@ class Client(object):
 
     def get_orderbook(self, symbol_code, limit=1):
         """Get orderbook. """
-        return self.session.get("%s/public/orderbook/%s%s" % (self.url, symbol_code, '?limit=' + str(limit))).json()
+        return self.session.get(
+            "%s/public/orderbook/%s%s" % (self.url, symbol_code, '?limit=' + str(limit))
+        ).json()
+
+    def get_trades_public(self, symbol_code, limit=10, sort='DESC'):
+        query = 'limit={}&sort={}'.format(str(limit), sort)
+        return self.session.get(
+            "{}/public/trades/{}?{}".format(
+                self.url,
+                symbol_code,
+                query
+            )).json()
 
     def get_address(self, currency_code):
         """Get address for deposit."""
@@ -36,9 +47,12 @@ class Client(object):
 
     def transfer(self, currency_code, amount, to_exchange):
         return self.session.post("%s/account/transfer" % self.url, data={
-                'currency': currency_code, 'amount': amount,
-                'type': 'bankToExchange' if to_exchange else 'exchangeToBank'
+            'currency': currency_code, 'amount': amount,
+            'type': 'bankToExchange' if to_exchange else 'exchangeToBank'
             }).json()
+
+    def place_order(self, data):
+        return self.session.post('{}/order'.format(self.url), data=data).json()
 
     def new_order(self, client_order_id, symbol_code, side, quantity, price=None):
         """Place an order."""
@@ -54,14 +68,14 @@ class Client(object):
     def open_order(self, quantity, price):
         assert 0
         client_order_id = uuid.uuid4().hex
-        order = client.new_order(client_order_id, 'ETHBTC', 'buy', quantity, price)
+        order = self.new_order(client_order_id, 'ETHBTC', 'buy', quantity, price)
         if 'error' not in order:
             if order['status'] == 'filled':
                 print("Order filled", order)
             elif order['status'] == 'new' or order['status'] == 'partiallyFilled':
                 print("Waiting order...")
-                for k in range(0, 4):  # 1 min
-                    order = client.get_order(client_order_id, 15000)
+                for _ in range(0, 4):  # 1 min
+                    order = self.get_order(client_order_id, 15000)
                     print(order)
 
                     if 'error' in order:
@@ -73,7 +87,7 @@ class Client(object):
 
                 # cancel order if it isn't filled
                 if 'status' in order and order['status'] != 'filled':
-                    cancel = client.cancel_order(client_order_id)
+                    cancel = self.cancel_order(client_order_id)
                     print('Cancel order result', cancel)
                     # open buy order with highter price
         else:
@@ -82,8 +96,12 @@ class Client(object):
     def get_order(self, client_order_id, wait=None):
         """Get order info."""
         data = {'wait': wait} if wait is not None else {}
-
         return self.session.get("%s/order/%s" % (self.url, client_order_id), params=data).json()
+
+    def get_orders(self, symbol_code=None):
+        """Get all orders info."""
+        data = {'symbol': symbol_code} if symbol_code is not None else {}
+        return self.session.get("%s/order/" % (self.url), params=data).json()
 
     def cancel_order(self, client_order_id):
         """Cancel order."""
@@ -125,26 +143,25 @@ class Client(object):
             buy_price = float(trade1['price'])
             profit = (float(trade2['quantity']) * sell_price) - (float(trade1['quantity']) * buy_price) - fees
             return round(profit, 9)
-        else:
-            return 'error'
+        return 'error'
 
-    def estimate_profit(self, symbol, quantity, sell, buy, side='long', type='tm'):
+    def estimate_profit(self, symbol, quantity, sell, buy, side='long', type_='tm'):
         # quantity in quote currency
         if 'error' not in symbol:
-            if type == 'tm':
+            if type_ == 'tm':
                 #fees = fee_taker + fee_maker
-                fees = trunc(quantity * float(symbol['takeLiquidityRate']), 9)
-                fees += trunc(quantity * float(symbol['provideLiquidityRate']), 9)
-            elif type == 'mm':
+                fees = utils.trunc(quantity * float(symbol['takeLiquidityRate']), 9)
+                fees += utils.trunc(quantity * float(symbol['provideLiquidityRate']), 9)
+            elif type_ == 'mm':
                 #fees = 2 * fee_maker
-                fees = trunc(quantity * float(symbol['provideLiquidityRate']), 9)
-                fees += trunc(quantity * float(symbol['provideLiquidityRate']), 9)
-            elif type == 'tt':
+                fees = utils.trunc(quantity * float(symbol['provideLiquidityRate']), 9)
+                fees += utils.trunc(quantity * float(symbol['provideLiquidityRate']), 9)
+            elif type_ == 'tt':
                 #fees = 2 * fee_taker
-                fees = trunc(quantity * float(symbol['takeLiquidityRate']), 9)
-                fees += trunc(quantity * float(symbol['takeLiquidityRate']), 9)
+                fees = utils.trunc(quantity * float(symbol['takeLiquidityRate']), 9)
+                fees += utils.trunc(quantity * float(symbol['takeLiquidityRate']), 9)
 
-            fees = trunc(fees, 9)
+            fees = utils.trunc(fees, 9)
             if side == 'long':
                 profit = float(quantity * ((sell / buy) -1 ))
             elif side == 'short':
@@ -153,8 +170,7 @@ class Client(object):
 
             return earn, round(profit, 9), fees
 
-        else:
-            return 'error'
+        return 'error'
 
     def wait_for_price(self, symbol_code, price, side='long', wait=5):
         stop = False

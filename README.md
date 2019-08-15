@@ -11,31 +11,3 @@ Need to have tkinter working for matplotlib.
 ## Test
 
 `python3 -m pytest test/test_stream.py`
-
-### Notes
-Requests results: Status_code
-- _content
-- headers
-- request
-- text
-- url
-- jason
-- _nextlink
-- ok
-- raise_for_status
-- _content_consumed
-- _next
-- apparent_encoding
-- close
-- connection
-- c ontent
-- cookies
-- elapsed
-- encoding
-- history
-- is_permanent_redirect
-- is_redirect
-- iter_content
-- iter_lines
-- raw
-- reason
