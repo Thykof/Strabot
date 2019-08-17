@@ -53,6 +53,19 @@ def obj_to_string(obj, msg='', indent=0):
         result += '\n' + '  ' * indent + key + ': ' + obj_to_string(obj[key], msg, indent + 2)
     return result
 
+def obj_to_string_(obj, msg='', indent=0):
+    if isinstance(obj, (list, tuple)):
+        result = ''
+        for item in obj:
+            result += '  ' * indent + obj_to_string(item, msg, indent + 2)
+        return result
+    if isinstance(obj, dict):
+        result = ''
+        for key in obj.keys():
+            result += '\n' + '  ' * indent + key + ': ' + obj_to_string(obj[key], msg, indent + 2)
+        return result
+    return msg + '  ' * indent + str(obj)
+
 def goodbye(orders, profit):
     """Save orders and profit dictionnaries."""
     with open('data/profit.txt', 'a') as myfile:

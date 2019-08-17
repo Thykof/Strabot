@@ -5,10 +5,10 @@ import json
 import atexit
 import datetime
 import math
-from threading import Thread
+from threading import Thread, active_count
 import sys
-import dateutil.parser
 from decimal import Decimal
+import dateutil.parser
 
 
 from private import auth as keys
@@ -27,6 +27,7 @@ FILLED = 'filled'
 EXPIRED = 'expired'
 CANCELED = 'canceled'
 NEW = 'new'
+SUSPENDED = 'suspended'
 # Side
 BUY = 'buy'
 SELL = 'sell'
@@ -103,7 +104,8 @@ def confirm(name, message=None, data=None):
         m = message
     else:
         m = {
-            'order': 'about to place an order... '
+            'order': 'about to place an order... ',
+            'retry': 'retry previous operation ? '
         }[name]
     tell('CONFIRMATION')
     response = input(m)
@@ -115,6 +117,7 @@ def confirm(name, message=None, data=None):
 def validate_price(symbol, price):
     if math.modf(price / symbol['tickSize'])[0] != 0:
         raise ValueError('price should be divided by tickSize without residue')
+    # TODO: buy price can't be the best ask price and vice versa
 
 def validate_quantity(symbol, quantity):
     if math.modf(quantity / symbol['quantityIncrement'])[0] != 0:
@@ -126,7 +129,7 @@ def validate_stop_price(stop_price, price, side):
         tell(str(side))
         raise TraderError('invalid side')
     if str(side) == BUY and stop_price >= price or str(side) == SELL and stop_price <= price:
-        raise TraderError('invalide stop price: stop: {}, limit: {}'.format(str(stop_price), str(price)))
+        raise TraderError('invalid stop price: stop: {}, limit: {}'.format(str(stop_price), str(price)))
 
 
 class TraderError(Exception):
@@ -151,7 +154,7 @@ class Trader:
         self.price_depth = 1
         self.expire_time = expire_time or 60
         self.wait = wait or 20
-        self.n_target = 10
+        self.n_target = 30
         self.orders = list()
         # self.orders_stop = list()
         self.current_position = None # position order
@@ -193,6 +196,38 @@ class Trader:
             raise TraderError('invalid side')
         return price
 
+    def get_stop_price(self, side=None):
+        if not side:
+            side = self.current_side
+        # Raise stop price if possible (take profit)
+        stop_price = self.get_price_from_orderbook(
+            side.to_spread(),
+            self.price_depth + self.security_level
+        )
+        tell('stop price from orderbook ' + str(stop_price))
+        if self.current_stop:
+            tell('current stop price ' + self.current_stop['price'])
+        if self.current_position:
+            tell('current position price ' + self.current_position['price'])
+            tell('current position side ' + self.current_position['side'])
+        tell('current side ' + str(side))
+        if self.current_stop and not ERROR in self.current_stop:
+            return Decimal(self.current_stop['price'])
+            # Keep the same stop price as before if the new potential stop price
+            # is bellow the previous stop price
+            # if str(side) == BUY:
+            #     select_func = max
+            # elif str(side) == SELL:
+            #     select_func = min
+            # else:
+            #     raise ValueError("side should be 'buy' or 'sell'")
+            # stop_price = select_func(
+            #     stop_price,
+            #     Decimal(self.current_stop['price'])
+            # )
+        return stop_price
+        # return stop_price
+
     #### Hitsory
     def store_order(self):
         with open('data/orders.json', 'w+') as json_file:
@@ -201,8 +236,8 @@ class Trader:
                 orders = json.loads(content)
             else:
                 orders = []
-            orders.extend(self.current_position)
-            orders.extend(self.current_stop)
+            orders.extend(self.current_position or [])
+            orders.extend(self.current_stop or [])
             orders.extend(self.orders)
             json.dump(orders, json_file, indent=2)
 
@@ -210,11 +245,13 @@ class Trader:
     def cancel_orders(self):
         if (self.current_position and
             self.current_position['status'] not in [FILLED, EXPIRED, CANCELED]):
+            tell('canceling position')
             response = self.c.cancel_order(self.current_position['clientOrderId'])
             if not self.silent:
                 utils.print_obj(response, 10)
         if (self.current_stop and
             self.current_stop['status'] not in [FILLED, EXPIRED, CANCELED]):
+            tell('canceling stop')
             response = self.c.cancel_order(self.current_stop['clientOrderId'])
             if not self.silent:
                 utils.print_obj(response, 10)
@@ -242,13 +279,18 @@ class Trader:
             go = True
         if go:
             tell(data_stop, 0, True)
-            order_stop = self.c.place_order(data_stop)
-            self.current_stop = order_stop
-            tell('------ stop loss order')
-            utils.print_obj(self.current_stop, 4)
-            self.watcher_stop = Thread(target=self.watch_stop)
-            self.watcher_stop.start()
-            return order_stop
+            order = self.c.place_order(data_stop)
+            if not ERROR in order:
+                self.current_stop = order
+                tell('------ stop loss order')
+                utils.print_obj(self.current_stop, 4)
+                if order['status'] != SUSPENDED:
+                    tell('Strange stop order status: ' + order['status'])
+                    if confirm('retry', data=data_stop):
+                        return self.place_order(stop_price, side)
+                self.watcher_stop = Thread(target=self.watch_stop)
+                self.watcher_stop.start()
+            return order
         return None
 
     def place_order(self, price, side):
@@ -273,11 +315,16 @@ class Trader:
         if go:
             tell(data, 0, True)
             order = self.c.place_order(data)
-            self.current_position = order
-            tell('------ current_position')
-            utils.print_obj(self.current_position, 4)
-            self.watcher_order = Thread(target=self.watch_order)
-            self.watcher_order.start()
+            if not ERROR in order:
+                self.current_position = order
+                tell('------ current_position')
+                utils.print_obj(self.current_position, 4)
+                if order['status'] != NEW:
+                    tell('Strange order status: ' + order['status'])
+                    if confirm('retry', data=data):
+                        return self.place_order(price, side)
+                self.watcher_order = Thread(target=self.watch_order)
+                self.watcher_order.start()
             return order
         return None
 
@@ -291,7 +338,7 @@ class Trader:
             # tell('-------------------------------------')
             if ERROR in order_status:
                 if order_status[ERROR]['code'] == 20002 and order_status[ERROR]['message'] == 'Order not found':
-                    tell('WARNING: order not found')
+                    tell('WARNING: order not found ' + order['clientOrderId'])
                     return order_status
                 utils.print_obj(order_status, 7)
                 tell('error in order_status')
@@ -307,52 +354,74 @@ class Trader:
 
     def watch_order(self):
         while True:
-            current_position = self.get_order_status(self.current_position)
-            if not ERROR in current_position:
-                if current_position['status'] == FILLED:
-                    self.on_order_filled(current_position)
-                    break
-                elif current_position['status'] == EXPIRED:
-                    self.on_order_expired(current_position)
-                    break
-                elif current_position['status'] != NEW:
-                    raise ValueError("order status should be 'new', 'filled' or 'expired'")
+            if self.current_position['status'] != CANCELED:
+                current_position = self.get_order_status(self.current_position)
+                if not ERROR in current_position:
+                    if current_position['status'] == FILLED:
+                        self.on_order_filled(current_position)
+                        break
+                    elif current_position['status'] == EXPIRED:
+                        self.on_order_expired(current_position)
+                        break
+                    elif current_position['status'] != NEW:
+                        raise ValueError("order status should be 'new', 'filled' or 'expired'")
+                else:
+                    if current_position[ERROR]['code'] == 20002 and current_position[ERROR]['message'] == 'Order not found':
+                        tell('watched limit order not found, exit watcher')
+                        break
+            else:
+                tell('attempting to watch a stop canceled order')
+                break
 
     def watch_stop(self):
         while True:
-            current_stop = self.get_order_status(self.current_stop)
-            if not ERROR in current_stop:
-                if current_stop['status'] == FILLED:
-                    self.on_stop_filled(current_stop)
-                    break
-                elif current_stop['status'] == EXPIRED:
-                    self.on_stop_expired(current_stop)
-                    break
-                elif current_stop['status'] != NEW:
-                    raise ValueError("order stop status should be 'new', 'filled' or 'expired'")
+            if self.current_stop['status'] != CANCELED:
+                current_stop = self.get_order_status(self.current_stop)
+                if not ERROR in current_stop:
+                    if current_stop['status'] == FILLED:
+                        self.on_stop_filled(current_stop)
+                        break
+                    elif current_stop['status'] == EXPIRED:
+                        self.on_stop_expired(current_stop)
+                        break
+                    elif current_stop['status'] != NEW:
+                        raise ValueError("order stop status should be 'new', 'filled' or 'expired'")
+                else:
+                    if current_stop[ERROR]['code'] == 20002 and current_stop[ERROR]['message'] == 'Order not found':
+                        tell('watched stop order not found, exit watcher')
+                        break
             else:
-                raise TraderError('error in get_order_status in watch_stop')
+                tell('attempting to watch a stop canceled order')
+                break
 
     #### Event handlers
     def on_order_filled(self, order):
-        # change current_side
         self.orders.append(order)
-        self.current_side = self.current_side.oposite()
+        # change current_side:
         # Cancel stop order
-        self.current_stop = self.c.cancel_order(self.current_stop['clientOrderId'])
-        self.watcher_stop.join() # wait for the thread watcher to finish
-        if not self.silent:
-            tell('------ canceled stop')
-            utils.print_obj(self.current_stop)
-        if not ERROR in self.current_stop:
-            assert self.current_stop['status'] == CANCELED # TODO: do this elsewhere (a methods?)
+        if self.current_stop:
+            self.current_stop = self.c.cancel_order(self.current_stop['clientOrderId'])
+            if not self.silent:
+                tell('------ canceled stop')
+                utils.print_obj(self.current_stop)
+            if not ERROR in self.current_stop:
+                assert self.current_stop['status'] == CANCELED
+                # TODO: do this elsewhere (a methods?)
 
+        # Get the stop price
+        stop_price = self.get_stop_price()
+        self.place_stop_order(stop_price, self.current_side)
+
+        # Switch position side
+        self.current_side = self.current_side.oposite()
         self.take_position()
 
     def on_order_expired(self, order):
         # Stop order has also expired
         # Keep the same current_side
-        self.watcher_stop.join() # wait for the thread watcher to finish
+        # re place a stop order, and raise it if possible to place a take profit order
+        tell('limit order expired')
+        # re take position is the same side
         self.take_position()
 
     def on_stop_filled(self, order):
@@ -362,57 +431,28 @@ class Trader:
         # 3. analyse the trend line and choose a side
         self.orders.append(order)
         tell('Stop loss filled, exit')
-        self.watcher_order.join()
         sys.exit()
 
     def on_stop_expired(self, order):
         # Position order has also expired
         tell('Stop loss exipred')
-        # self.watcher_order.join()
+        stop_price = self.get_stop_price()
+        self.place_stop_order(stop_price, self.current_side.oposite())
 
     #### Positions
     def take_position(self):
-        tell('take_position')
+        """"""
+        tell('take_position ' + str(self.current_side))
         if self.n > self.n_target:
             tell('position number target reached')
         else:
-            # Get the stop price
-            #
-            if self.current_stop and self.current_stop['side'] == str(self.current_side.oposite()): # TODO: or current_stop side != self.current_side...
-                stop_price = self.raise_stop()
-            else:
-                stop_price = self.get_price_from_orderbook(
-                    self.current_side.to_spread(),
-                    self.price_depth + self.security_level
-                )
-            # Get the limit price
             price = self.get_price_from_orderbook(self.current_side.to_spread(), self.price_depth)
-
+            if self.orders:
+                previous_order = self.orders[-1]
             self.n += 1
             self.place_order(price, self.current_side)
-            self.place_stop_order(stop_price, self.current_side)
+            tell('number of active threads:' + str(active_count()))
 
-    def raise_stop(self):
-        tell('raise_stop')
-        # Raise stop price if possible (take profit)
-        if str(self.current_side) == BUY:
-            select_func = max
-        elif str(self.current_side) == SELL:
-            select_func = min
-        else:
-            raise ValueError("side should be 'buy' or 'sell'")
-
-        # if self.current_stop[CANCELED]:
-        # Keep the same stop price as before if the new potential stop price
-        # is bellow the previous stop price
-        stop_price = select_func(
-            self.get_price_from_orderbook(
-                self.current_side.to_spread(),
-                self.price_depth + self.security_level
-            ),
-            Decimal(self.current_stop['price'])
-        )
-        return stop_price
 
     def start(self, side):
         self.current_side = side
@@ -432,4 +472,6 @@ class Trader:
 def main():
     t = Trader(keys, 'DOGEBTC', silent=False, need_confirmation=False)
     atexit.register(t.at_exit)
-    t.start(Side(BUY))
+    t.start(Side(SELL))
+    # TODO: don't move position in a no profitable zone, look at to the previous trade
+    # TODO: don't expire stop order, cancel them if can place a take profit order instead

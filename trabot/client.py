@@ -11,12 +11,18 @@ class Client(object):
         self.session = requests.session()
         self.session.auth = (public_key, secret)
 
+    def log(self, msg):
+        utils.log(msg, 'client.log')
+
     def __str__(self):
         return 'Client, url: ' + self.url
 
     def get_symbol(self, symbol_code):  # symbol_code: ETHBTC
         """Get symbol."""
-        return self.session.get("%s/public/symbol/%s" % (self.url, symbol_code)).json()
+        response = self.session.get("%s/public/symbol/%s" % (self.url, symbol_code))
+        print(response)
+        # self.log(response)
+        return response.json() # TODO: log evrywhere
 
     def get_orderbook(self, symbol_code, limit=1):
         """Get orderbook. """
