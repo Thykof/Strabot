@@ -1,21 +1,21 @@
 from os import path, mkdir
+import atexit
 
 
-# from trabot.fft import fft_plot
-# from trabot import trabot
 from trabot import trader
-# from trabot import stream
+from private import auth
+from trabot import data as d
+from trabot.side import Side
 
-
-if not path.exists('data'):
-    mkdir('data')
 
 def main():
-    trader.main()
-    # stream.main()
-    # fft_plot()
-    # trabot.algo()
+    t = trader.Trader(auth, 'DOGEBTC', silent=False, need_confirmation=False)
+    atexit.register(t.at_exit)
+    t.start(Side(d.SELL))
+    # TODO: don't move position in a no profitable zone, look at to the previous trade
 
 
 if __name__ == "__main__":
+    if not path.exists('data'):
+        mkdir('data')
     main()
