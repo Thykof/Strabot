@@ -20,7 +20,6 @@ def test_obj_to_string():
         }
     ]
     out = helpers.obj_to_string(in_)
-    print(out)
     expected_out = """
 id: 6
 clientOrderId: pkjhvgc
