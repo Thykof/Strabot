@@ -35,3 +35,10 @@ def obj_to_string(obj, msg='', indent=0):
         result += '\n' + '  ' * indent + key + ': ' + \
             obj_to_string(obj[key], msg, indent)
     return result
+
+
+def store_stats(value, filename='data/stats.txt'):
+    if not filename.startswith('data/'):
+        filename = 'data/' + filename
+    with open(filename, 'a') as file_stat:
+        file_stat.write(str(value) + '\n')
