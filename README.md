@@ -10,4 +10,4 @@ Need to have tkinter working for matplotlib.
 
 ## Test
 
-`python3 -m pytest test/test_stream.py`
+`python3 setup.py test`

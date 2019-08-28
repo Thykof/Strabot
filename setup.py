@@ -4,11 +4,17 @@ from setuptools.command.test import test as TestCommand
 
 
 import pytest
+import coverage
 
 
 class PyTest(TestCommand):
     def run_tests(self):
+        cov = coverage.Coverage()
+        cov.start()
         errno = pytest.main(['-vv'])
+        cov.stop()
+        cov.save()
+        cov.html_report()
         sys.exit(errno)
 
 
