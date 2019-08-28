@@ -65,26 +65,47 @@ def get_breakeven(order, side, symbol):
     return Decimal(breakeven_price).quantize(Decimal(symbol['tickSize']))
 
 
-def get_profitable_price(filled_order, price, side, min_margin, symbol):
+def get_profitable_price(filled_order, orderbook_price, side, min_margin,
+                         symbol):
     breakeven_price = get_breakeven(filled_order, side, symbol)
     log('breakeven_price ' + str(breakeven_price))
     if str(side) == d.BUY:
-        return min(
-            breakeven_price - Decimal(str(min_margin))
-            * Decimal(symbol['tickSize']), price)
+        profitable_price = breakeven_price - Decimal(str(min_margin)) * (
+            Decimal(filled_order['tradesReport'][0]['price'])
+            - breakeven_price
+        )
+        return min(profitable_price, orderbook_price)
     if str(side) == d.SELL:
-        return max(breakeven_price, price)
+        profitable_price = breakeven_price + Decimal(str(min_margin)) * (
+            breakeven_price
+            - Decimal(filled_order['tradesReport'][0]['price'])
+        )
+        return max(profitable_price, orderbook_price)
+    # TODO: instead of + ticksize, + min_margin * (Pv - PBE)
     raise TraderError("side must be 'buy' or 'sell'")
 
 
-def store_order(current_position, current_stop, orders):
-    with open('data/orders.json', 'w+') as json_file:
+def store_orders(current_position, current_stop, new_orders,
+                 filename='data/orders.json'):
+    with open(filename, 'w+') as json_file:
         content = json_file.read()
         if content:
             orders = json.loads(content)
         else:
             orders = []
-        orders.extend(current_position or [])
-        orders.extend(current_stop or [])
-        orders.extend(orders)
-        json.dump(orders, json_file, indent=2)
+        if current_position:
+            orders.append(current_position)
+        if current_stop:
+            orders.append(current_stop)
+        orders.extend(new_orders)
+        orders_ = list()
+        for order in orders:
+            for key in order.keys():
+                if isinstance(order[key], Decimal):
+                    order[key] = str(order[key])
+                elif isinstance(order[key], dict):
+                    for k in order[key].keys():
+                        if isinstance(order[key][k], Decimal):
+                            order[key][k] = str(order[key][k])
+            orders_.append(order)
+        json.dumps(orders_, indent=2)

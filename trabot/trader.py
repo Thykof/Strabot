@@ -17,12 +17,14 @@ from trabot.exception import TraderError
 
 class Trader:
     def __init__(self, auth, symbol_code, silent=True, expire_time=None,
-                 wait=None, need_confirmation=True, min_margin=None):
+                 wait=None, need_confirmation=True, min_margin=None,
+                 security_level=None, price_depth=None):
         self.auth = auth
         self.connect()
         self.symbol_code = symbol_code
         self.silent = silent
         self.symbol = self.c.get_symbol(self.symbol_code)
+        log(self.symbol)
         self.symbol['quantityIncrement'] = self.symbol['quantityIncrement']
         self.symbol['tickSize'] = self.symbol['tickSize']
         self.symbol['takeLiquidityRate'] = self.symbol['takeLiquidityRate']
@@ -33,12 +35,12 @@ class Trader:
         self.relative_quantity = Decimal('1')
         self.trade_quantity = (self.relative_quantity
                                * Decimal(self.symbol['quantityIncrement']))
-        self.security_level = 8
-        self.price_depth = 1  # 2
+        self.security_level = security_level or 5
+        self.price_depth = price_depth or 1
         self.expire_time = expire_time or 60
         self.wait = wait or 60
         self.min_margin = min_margin or 1
-        self.n_target = 30
+        # self.n_target = 30
         self.orders = list()
         # self.orders_stop = list()
         self.current_position = None  # position order
@@ -210,13 +212,14 @@ class Trader:
                     return order_status
                 log(order_status, 7)
                 log('error in order_status')
-                raise TraderError('error in get_order_status in watch_position')
-            if not self.silent:
-                log('      order status:')
-                log(order_status, 15)
-            log(order_status['side'] + ' ' + order_status['status'])
-            if order_status['status'] in [d.FILLED, d.EXPIRED]:
-                return order_status
+                # raise TraderError('error in get_order_status in watch_position')
+            else:
+                if not self.silent:
+                    log('      order status:')
+                    log(order_status, 15)
+                log(order_status['side'] + ' ' + order_status['status'])
+                if order_status['status'] in [d.FILLED, d.EXPIRED]:
+                    return order_status
 
     def watch_order(self):
         while True:
@@ -238,7 +241,7 @@ class Trader:
                     log('watched limit order not found, exit watcher')
                     break
             else:
-                log('attempting to watch a stop canceled order')
+                log('attempting to watch a limit canceled order')
                 break
 
     def watch_stop(self):
@@ -259,7 +262,7 @@ class Trader:
                         log('watched stop order not found, exit watcher')
                         break
             else:
-                log('attempting to watch a stop canceled order')
+                log('attempting to watch a stop canceled order, exit watcher')
                 break
 
     # Event handlers
@@ -276,7 +279,6 @@ class Trader:
                 assert self.current_stop['status'] == d.CANCELED
                 # TODO: do this elsewhere (a methods?)
 
-        # Get the stop price
         stop_price = self.get_stop_price()
         self.place_stop_order(stop_price, self.current_side)
 
@@ -296,24 +298,27 @@ class Trader:
         self.push_order(order)
         log('Stop loss filled')
         self.current_side = self.current_side.oposite()
-        self.take_position()
+        stop_price = self.get_stop_price()
+        self.place_stop_order(stop_price, self.current_side)
+        # the limit order watcher will continue in the oposite side when
+        # the limit order will expire, hence # TODO:
 
     # Position
     def take_position(self):
         log('take_position ' + str(self.current_side))
-        if self.n > self.n_target:
-            log('position number target reached')
-        else:
-            price = self.get_price_from_orderbook(
-                self.current_side.to_spread(), self.price_depth)
-            if self.orders:
-                previous_order = self.orders[-1]
-                price = utils.get_profitable_price(
-                    previous_order, price, self.current_side, self.min_margin,
-                    self.symbol)
-            self.n += 1
-            self.place_order(price, self.current_side)
-            log('number of active threads:' + str(active_count()))
+        # if self.n > self.n_target:
+        #     log('position number target reached')
+        #     return
+        price = self.get_price_from_orderbook(
+            self.current_side.to_spread(), self.price_depth)
+        if self.orders:
+            previous_order = self.orders[-1]
+            price = utils.get_profitable_price(
+                previous_order, price, self.current_side, self.min_margin,
+                self.symbol)
+        self.n += 1
+        self.place_order(price, self.current_side)
+        log('number of active threads:' + str(active_count()))
 
     def start(self, side):
         self.current_side = side
@@ -322,7 +327,7 @@ class Trader:
     def at_exit(self):
         log('SAFE EXIT')
         self.cancel_orders()
-        utils.store_order(self.current_position, self.current_stop, self.orders)
+        utils.store_orders(self.current_position, self.current_stop, self.orders)
         active_orders = self.c.get_orders(self.symbol_code)
         if active_orders:
             log('##############################################')

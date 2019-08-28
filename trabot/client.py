@@ -5,32 +5,48 @@ import requests
 from trabot.helpers import log
 
 
+error_count = 0
+
+
 def get_error(status_code):
     return {'error': {
-        'code': status_code,
-        'message': 'bad response'
+        'code': status_code
     }}
 
 
 def request_wrapper(func):
-    def wrapper(*args, **kargs):
-        resp = func(*args, **kargs)
-        if resp.status_code != 200:
+    global error_count
+
+    def wrapper(self, *args, **kargs):
+        global error_count
+        resp = func(self, *args, **kargs)
+        if resp.status_code != 200 and resp.status_code != 400:
+            log(['request error', resp.status_code, resp, resp.text])
+            error_count += 1
+            if error_count < 5:
+                return wrapper(self, *args, **kargs)
             return get_error(resp.status_code)
         try:
             j = resp.json()
-            return j
         except ValueError as err:
             log(['get_symbol', err, resp, resp.text])
-            return 'error'
+            error_count += 1
+            if error_count < 5:
+                return wrapper(self, *args, **kargs)
+            return get_error(resp.status_code)
+        else:
+            error_count = 0
+            return j
     return wrapper
 
 
 class Client:
-    def __init__(self, url, public_key, secret):
+    def __init__(self, url, public_key, secret, max_error=None):
         self.url = url + "/api/2"
         self.session = requests.session()
         self.session.auth = (public_key, secret)
+        # self.error_count = 0
+        # self.max_error = max_error or 5
 
     def __str__(self):
         return 'Client, url: ' + self.url
