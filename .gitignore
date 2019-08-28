@@ -4,3 +4,6 @@ examples/
 __pycache__/
 *.log
 .pytest_cache
+htmlcov/
+.coverage
+Strabot.egg-info/
