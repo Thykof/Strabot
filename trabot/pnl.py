@@ -13,10 +13,7 @@ PRICE = dict()
 
 
 def divide(a, b):
-    if b != 0:
-        return a / b
-    return 0
-
+    return a/b if b!=0 else 0
 
 def read_csv(filename='trades.csv'):
     csv_file = open(filename, newline='')
@@ -172,10 +169,10 @@ def compute(filename):
             if 'unrealized_pnl' in pl[pair]:
                 unrealized_pnl += pl[pair]['unrealized_pnl']
 
-    print(pnl)
-    print(realized_pnl)
-    print(unrealized_pnl)
-    print(realized_pnl + unrealized_pnl)
+    print("pnl ", pnl)
+    print("realized_pnl ", realized_pnl)
+    print("unrealized_pnl ", unrealized_pnl)
+    print("realized_pnl + unrealized_pnl ", realized_pnl + unrealized_pnl)
 
     with open('data/pnlByPairs.json', 'w') as json_file:
         json.dump(pl, json_file, indent=2)
