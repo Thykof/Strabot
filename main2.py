@@ -27,7 +27,7 @@ def main(df, n=500):
     score_total_test = int()
     errors = float()
     for i in range(n):
-        Y = df['Close**']
+        Y = df['High']
         Y = Y.drop(index=start)
         X = df[X_columns]
         X = X.drop(index=len(df)-1)
@@ -38,7 +38,7 @@ def main(df, n=500):
         error = float()
         for index, row in df.iterrows():
             p = model.predict([row[X_columns]])
-            e = row['Close**'] - p
+            e = row['High'] - p
             error += float(abs(e))
         errors += error / len(df)
 
@@ -62,8 +62,8 @@ def main(df, n=500):
 
 def simulate(df, model):
     df = df.loc[:100]
-    print('df simulate')
-    print(df)
+    # print('df simulate')
+    # print(df)
     prix_achats = list()
     prix_ventes = list()
     diffs = list()
@@ -71,19 +71,14 @@ def simulate(df, model):
         # on est au jour n à 23 h 59
         x = row[X_columns]
         # on est au jour n+1 à 00 h 01, donc on a toutes les infos pour prédire
-        p = model.predict([x]) # on predit le prix au jour n+1 à 23 h 59
+        high_next_day = model.predict([x])[0] # on predit le prix au jour n+1 à 23 h 59
+        # print(high_next_day)
         # on veut prendre une décision au jour n+1 à 00 h 02
         x_decision = row['Close**']
-        diff = p - x_decision
-        diffs.append(diff)
-        if abs(diff) > 10:
+        if high_next_day - x_decision > 100:
             # si le prix evolue de 100 € minimum
-            if p < x_decision:
-                # vendre
-                prix_ventes.append(x_decision)
-            else:
-                # acheter
-                prix_achats.append(x_decision)
+            prix_achats.append(x_decision)
+            prix_ventes.append(high_next_day)
     print("nombre d'opérations : " + str(len(prix_achats)) + " " + str(len(prix_ventes)))
     if len(prix_achats) and len(prix_ventes):
         prix_achat_moy = statistics.mean(prix_achats)
@@ -98,10 +93,15 @@ if __name__ == '__main__':
     df = pandas.read_csv("bitcoin-price-all.csv", sep=';')
     df = df[['Open*', 'High', 'Low', 'Close**', 'Volume', 'Market Cap']]
     df = df.applymap(raw_data_to_numeric)
-    model = main(df, 100)
+    model = main(df, 1)
+    simulate(df, model)
     """
-    0.9999943637579561
+    0.9964937447077628
     erreur absolue moyenne
-    193.66252097289475
+    126.55156046128863
+    nombre d'opérations : 64 64
+    bilan
+    8179.9940625
+    8553.877646969964
+    4.570707284299624
     """
-    # simulate(df, model)
