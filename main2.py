@@ -27,7 +27,7 @@ def main(df, n=500):
     score_total_test = int()
     errors = float()
     for i in range(n):
-        Y = df['High']
+        Y = df['Close**']
         Y = Y.drop(index=start)
         X = df[X_columns]
         X = X.drop(index=len(df)-1)
@@ -38,7 +38,7 @@ def main(df, n=500):
         error = float()
         for index, row in df.iterrows():
             p = model.predict([row[X_columns]])
-            e = row['High'] - p
+            e = row['Close**'] - p
             error += float(abs(e))
         errors += error / len(df)
 
@@ -100,8 +100,8 @@ if __name__ == '__main__':
     df = df.applymap(raw_data_to_numeric)
     model = main(df, 100)
     """
-    0.9919901629881122
+    0.9999943637579561
     erreur absolue moyenne
-    131.29567924891825
-"""
+    193.66252097289475
+    """
     # simulate(df, model)
