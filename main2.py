@@ -7,7 +7,7 @@ import math
 import random
 import statistics
 
-X_columns = ['Open*', 'High', 'Low', 'Volume']
+X_columns = ['Open*', 'High', 'Low', 'Volume', 'Close**']
 
 def raw_data_to_numeric(raw_data):
     data = raw_data.replace(' ', '')
@@ -20,14 +20,14 @@ def main(df, n=500):
     end = 1000+random.randint(0, 1000)
     end = 500
     df = df.loc[start:end]
-    print('df main')
-    print(df)
+    # print('df main')
+    # print(df)
 
     # Ready
     score_total_test = int()
     errors = float()
     for i in range(n):
-        Y = df['Close**']
+        Y = df['High']
         Y = Y.drop(index=start)
         X = df[X_columns]
         X = X.drop(index=len(df)-1)
@@ -38,26 +38,26 @@ def main(df, n=500):
         error = float()
         for index, row in df.iterrows():
             p = model.predict([row[X_columns]])
-            e = row['Close**'] - p
+            e = row['High'] - p
             error += float(abs(e))
         errors += error / len(df)
 
-    print("score")
+    # print("score")
     print(score_total_test / n) # test
     print('erreur absolue moyenne')
     print(errors / n) # test
 
     # manual testing:
-    test = {
-        'Open*': [6161.9, 6127.9, 6675.17],
-        'High': [6245, 6228.1, 6735.46],
-        'Low': [5963.8, 5974.7, 6590.96],
-        'Volume': [16580, 14600, 35319797642],
-        'Market Cap': [122088327519, 122088327519, 122834375216],
-    } # 26/03 and 27/03
-    # close[]:  6127.9   5748.8   6716.44
-    df_test = pandas.DataFrame(test, columns=X_columns)
-    print(model.predict(df_test))
+    # test = {
+    #     'Open*': [6161.9, 6127.9, 6675.17],
+    #     'High': [6245, 6228.1, 6735.46],
+    #     'Low': [5963.8, 5974.7, 6590.96],
+    #     'Volume': [16580, 14600, 35319797642],
+    #     'Market Cap': [122088327519, 122088327519, 122834375216],
+    # } # 26/03 and 27/03
+    # # close[]:  6127.9   5748.8   6716.44
+    # df_test = pandas.DataFrame(test, columns=X_columns)
+    # print(model.predict(df_test))
     return model
 
 def simulate(df, model):
@@ -98,5 +98,10 @@ if __name__ == '__main__':
     df = pandas.read_csv("bitcoin-price-all.csv", sep=';')
     df = df[['Open*', 'High', 'Low', 'Close**', 'Volume', 'Market Cap']]
     df = df.applymap(raw_data_to_numeric)
-    model = main(df, 1)
-    simulate(df, model)
+    model = main(df, 100)
+    """
+    0.9919901629881122
+    erreur absolue moyenne
+    131.29567924891825
+"""
+    # simulate(df, model)
