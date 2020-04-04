@@ -1,4 +1,4 @@
-from sklearn import tree
+from sklearn import tree, svm
 from sklearn.model_selection import train_test_split
 from sklearn import linear_model
 from sklearn import preprocessing
@@ -13,11 +13,10 @@ def raw_data_to_numeric(raw_data):
     data = data.replace(',', '.')
     return float(data)
 
-def train_model(df, n):
+def train_model(df, algo, n):
     x = df.iloc[:,:n-1]
     y = df.iloc[:,n-1]
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2)
-    algo = linear_model.LinearRegression()
     model = algo.fit(x_train, y_train)
     return model, model.score(x_test, y_test)
 
@@ -35,6 +34,7 @@ def simulate(df, model, m=100, threshold=100):
         x = row.head(df.shape[1]-1)
         prediction = model.predict([x])[0]
         x_decision = row.tail(1).to_list()[0]
+        # print(str(prediction) + " " + str(x_decision))
         if abs(prediction - x_decision) > threshold:
             if prediction > x_decision:
                 # buy
@@ -46,9 +46,11 @@ def simulate(df, model, m=100, threshold=100):
     if len(prix_achats) and len(prix_ventes):
         prix_achat_moy = statistics.mean(prix_achats)
         prix_vente_moy = statistics.mean(prix_ventes)
+        # print(prix_achat_moy)
+        # print(prix_vente_moy)
         return (((prix_vente_moy / prix_achat_moy) - 1) * 100)
 
-def main(n=14, k=500):
+def main(algo, n=14, k=50):
     """
     Create row of n days.
     Train and test k models.
@@ -75,7 +77,7 @@ def main(n=14, k=500):
     tot_score = int()
     # train several models
     for i in range(k):
-        model, score = train_model(new_df, n)
+        model, score = train_model(new_df, algo, n)
         tot_pnl += simulate(new_df, model, n)
         tot_score += score
     print(tot_pnl / k) # 5.262569795325347
@@ -83,4 +85,9 @@ def main(n=14, k=500):
 
 
 if __name__ == '__main__':
-    main()
+    main(svm.SVR(), 14, 100)
+    main(linear_model.LinearRegression(), 14, 100)
+    # 899.5609988944342
+    # -0.4233642146716479
+    # 5.434163478138874
+    # 0.9869320833349131
