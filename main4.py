@@ -1,12 +1,10 @@
-from sklearn import tree, svm, gaussian_process
+from sklearn import tree, svm, gaussian_process, linear_model
 from sklearn.model_selection import train_test_split
-from sklearn import linear_model
-from sklearn import preprocessing
 import pandas
-import numpy
 import math
-import random
 import statistics
+
+DEBUG = True
 
 def raw_data_to_numeric(raw_data):
     data = raw_data.replace(' ', '')
@@ -19,13 +17,10 @@ def split_df(df, test_size=0.2):
     y = df.iloc[:,n-1]
     return train_test_split(x, y, test_size=test_size)
 
-
-def train_model(df, algo, n):
+def train_model(df, algo):
     x_train, x_test, y_train, y_test = split_df(df)
     model = algo.fit(x_train, y_train)
     return model, model.score(x_test, y_test)
-
-
 
 def evaluate(df, model, m=100, threshold=100):
     """
@@ -49,31 +44,34 @@ def evaluate(df, model, m=100, threshold=100):
             if prediction > x_decision:
                 # buy
                 buy_prices.append(x_decision)
-                sell_prices.append(prediction)
+                if y > prediction:
+                    sell_prices.append(prediction)
             else:
-                buy_prices.append(prediction)
+                # sell
                 sell_prices.append(x_decision)
+                if y < prediction:
+                    buy_prices.append(prediction)
 
         # calculate error
         tot_error += error
 
     # end of for loop
     if len(buy_prices) and len(sell_prices):
-        prix_achat_moy = statistics.mean(buy_prices)
-        prix_vente_moy = statistics.mean(sell_prices)
-        # print(prix_achat_moy)
-        # print(prix_vente_moy)
+        average_buy_price = statistics.mean(buy_prices)
+        average_sell_price = statistics.mean(sell_prices)
+        return (((average_sell_price / average_buy_price) - 1) * 100), tot_error / m
     else:
-        prix_achat_moy = 0
-        prix_vente_moy = 0
-    return (((prix_vente_moy / prix_achat_moy) - 1) * 100), tot_error / m
+        average_buy_price = 0
+        average_sell_price = 0
+        return 0, tot_error / m
 
-def main(algo, n=14, k=50):
+def train_algo(algo, k, n):
     """
     Create row of n days.
     Train and test k models.
     """
-    print(str(algo)[:str(algo).find('(')])
+    m = 100 # evaluate with the m first rows
+    algo_name = str(algo)[:str(algo).find('(')]
     df = pandas.read_csv("bitcoin-price-all.csv", sep=';')
     # df = df.loc[:99]
     df = df[['Close**']]
@@ -97,41 +95,54 @@ def main(algo, n=14, k=50):
     tot_error = int()
     # train several models
     for i in range(k):
-        model, score = train_model(new_df, algo, n)
+        model, score = train_model(new_df, algo)
         tot_score += score
-        pnl, error = evaluate(new_df, model, n)
+        pnl, error = evaluate(new_df, model, m)
         tot_pnl += pnl
         tot_error = error
-    print('pnl:   ' + str(tot_pnl / k))
-    print('score: ' + str(tot_score / k))
-    print('error: ' + str(tot_error / k))
-    print()
+    pnl = tot_pnl / k
+    score = tot_score / k
+    error = tot_error / k
+    # if DEBUG:
+    #     print(algo_name)
+    #     print('pnl:   ' + str(pnl))
+    #     print('score: ' + str(score))
+    #     print('error: ' + str(error))
+    #     print()
+    return algo_name, pnl, score, error
+
+def main(algos, k_range=(10, 40), n_range=(4, 100)):
+    tries = list()
+    for algo in algos:
+        for k in range(k_range[0], k_range[1]):
+            for n in range(n_range[0], n_range[1]):
+                algo_name, pnl, score, error = train_algo(algo, k, n)
+                tries.append(((algo, k, n), (algo_name, pnl, score, error)))
+
+    max_pnl = int()
+    max_pnl_config = None
+    min_error = math.inf
+    min_error_config = None
+    for result in tries:
+        if DEBUG:
+            print(result)
+        if max_pnl < result[1][1]:
+            max_pnl = result[1][1]
+            max_pnl_config = result
+        if min_error > result[1][3]:
+            min_error = result[1][3]
+            min_error_config = result
+    return min_error_config, max_pnl_config
 
 if __name__ == '__main__':
-    n = 15
-    k = 100
-    main(svm.SVR(), n, k)
-    main(linear_model.SGDRegressor(), n, k)
-    main(linear_model.LinearRegression(), n, k)
-    main(gaussian_process.GaussianProcessRegressor(), n, k)
-    """
-    SVR
-    pnl:   920.0377622338833
-    score: -0.40757203601020864
-    error: 84.06736743459896
-
-    SGDRegressor
-    pnl:   3326314273912839.0
-    score: -8.365597114192531e+27
-    error: 265865377123154.0
-
-    LinearRegression
-    pnl:   3.9391180976549163
-    score: 0.981791386758865
-    error: 3.493815099979772
-
-    GaussianProcessRegressor
-    pnl:   62.6189457666077
-    score: -0.7321396045392251
-    error: 17.448546674346023
-    """
+    # k: number of repetition
+    # n: number of days in each row
+    algos = list()
+    # algos.append(svm.SVR())
+    algos.append(linear_model.LinearRegression())
+    min_error_config, max_pnl_config = main(algos, k_range=(99, 100), n_range=(13, 28))
+    print()
+    print(min_error_config)
+    print(max_pnl_config)
+    # ((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 99, 27), ('LinearRegression', -3.1189532799772794, 0.9856830015436462, 0.43948804233029143))
+    # ((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 99, 20), ('LinearRegression', 17.88825022726556, 0.9632370336171315, 2.0505242580355674))
