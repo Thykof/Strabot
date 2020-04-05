@@ -1,8 +1,10 @@
-from sklearn import tree, svm, gaussian_process, linear_model
+from sklearn import tree, svm, gaussian_process, linear_model, isotonic
 from sklearn.model_selection import train_test_split
 import pandas
 import math
 import statistics
+import matplotlib.pyplot as plt
+import time
 
 DEBUG = True
 
@@ -22,7 +24,7 @@ def train_model(df, algo):
     model = algo.fit(x_train, y_train)
     return model, model.score(x_test, y_test)
 
-def evaluate(df, model, m=100, threshold=100):
+def evaluate(df, model, m=100, threshold=50):
     """
     Iterate over m first rows and evaluate trades.
     Trades only if price move more than the threshold.
@@ -70,7 +72,7 @@ def train_algo(algo, k, n):
     Create row of n days.
     Train and test k models.
     """
-    m = 100 # evaluate with the m first rows
+    m = 200 # evaluate with the m first rows
     algo_name = str(algo)[:str(algo).find('(')]
     df = pandas.read_csv("bitcoin-price-all.csv", sep=';')
     # df = df.loc[:99]
@@ -86,6 +88,9 @@ def train_algo(algo, k, n):
             i += 1
             if i >= n:
                 new_df_list.append(row)
+                # plt.plot(row)
+                # plt.show()
+                # input()
                 row = list()
                 i = 0
     new_df = pandas.DataFrame(new_df_list)
@@ -135,14 +140,16 @@ def main(algos, k_range=(10, 40), n_range=(4, 100)):
     return min_error_config, max_pnl_config
 
 if __name__ == '__main__':
+    b = time.time()
     # k: number of repetition
     # n: number of days in each row
     algos = list()
-    # algos.append(svm.SVR())
     algos.append(linear_model.LinearRegression())
-    min_error_config, max_pnl_config = main(algos, k_range=(99, 100), n_range=(13, 28))
+    k_ = 100
+    min_error_config, max_pnl_config = main(algos, k_range=(k_, k_+1), n_range=(3, 300))
     print()
     print(min_error_config)
     print(max_pnl_config)
-    # ((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 99, 27), ('LinearRegression', -3.1189532799772794, 0.9856830015436462, 0.43948804233029143))
-    # ((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 99, 20), ('LinearRegression', 17.88825022726556, 0.9632370336171315, 2.0505242580355674))
+    print(time.time() - b)
+    # ((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 100, 237), ('LinearRegression', 45.68488713320224, 0.07247466593208655, 0.0010155464483645532))
+    # ((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 100, 272), ('LinearRegression', 1359.3806843635784, -2.2048604617611667, 0.14088564395361566))
