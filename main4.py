@@ -72,7 +72,6 @@ def train_algo(algo, k, n):
     Create row of n days.
     Train and test k models.
     """
-    m = 200 # evaluate with the m first rows
     algo_name = str(algo)[:str(algo).find('(')]
     df = pandas.read_csv("bitcoin-price-all.csv", sep=';')
     # df = df.loc[:99]
@@ -94,6 +93,7 @@ def train_algo(algo, k, n):
                 row = list()
                 i = 0
     new_df = pandas.DataFrame(new_df_list)
+    m = new_df.size # evaluate with the m first rows
 
     tot_pnl = int() # total profit and loss
     tot_score = int()
@@ -146,10 +146,13 @@ if __name__ == '__main__':
     algos = list()
     algos.append(linear_model.LinearRegression())
     k_ = 100
-    min_error_config, max_pnl_config = main(algos, k_range=(k_, k_+1), n_range=(3, 300))
+    min_error_config, max_pnl_config = main(algos, k_range=(k_, k_+1), n_range=(237, 273))
     print()
     print(min_error_config)
     print(max_pnl_config)
     print(time.time() - b)
-    # ((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 100, 237), ('LinearRegression', 45.68488713320224, 0.07247466593208655, 0.0010155464483645532))
-    # ((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 100, 272), ('LinearRegression', 1359.3806843635784, -2.2048604617611667, 0.14088564395361566))
+    """
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 100, 243), ('LinearRegression', 8.344925871153123, 0.11943049606555695, 6.430204641783691e-05))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 100, 268), ('LinearRegression', 1105.9840775878367, -1.1371006897282152, 0.0027262639968938405))
+30.704710960388184
+    """
