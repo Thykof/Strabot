@@ -54,8 +54,6 @@ def evaluate(df_tuple, model, threshold):
         average_sell_price = statistics.mean(sell_prices)
         return (((average_sell_price / average_buy_price) - 1) * 100), tot_error / n
     else:
-        average_buy_price = 0
-        average_sell_price = 0
         return 0, tot_error / n
 
 def train_algo(df, algo, k, n, p, threshold):
@@ -94,7 +92,7 @@ def train_algo(df, algo, k, n, p, threshold):
     error = tot_error / k
     return pnl, score, error
 
-def main(algos, k_range=(10, 40), n_range=(4, 100), threshold=50):
+def main(algos, k_range=(10, 40), n_range=(4, 100), p_min_max=None, threshold=50):
     tries = list()
     df = pandas.read_csv("bitcoin-price-all.csv", sep=';')
     df = df[['Close**']]
@@ -103,7 +101,10 @@ def main(algos, k_range=(10, 40), n_range=(4, 100), threshold=50):
         for k in range(k_range[0], k_range[1]):
             for n in range(n_range[0], n_range[1]):
                 for p in range(1, n+1):
+                    if p_min_max is not None and not (p_min_max[0] <= p and p <= p_min_max[1]):
+                        continue
                     pnl, score, error = train_algo(df, algo, k, n, p, threshold)
+                    if DEBUG: print(((algo, k, n, p), (pnl, score, error)))
                     tries.append(((algo, k, n, p), (pnl, score, error)))
 
     max_pnl = 0
@@ -113,7 +114,6 @@ def main(algos, k_range=(10, 40), n_range=(4, 100), threshold=50):
     max_score = 0
     max_score_config = None
     for result in tries:
-        if DEBUG: print(result)
         if max_pnl < result[1][0]:
             max_pnl = result[1][0]
             max_pnl_config = result
@@ -131,12 +131,13 @@ if __name__ == '__main__':
     # n: number of days in each row
     algos = list()
     algos.append(linear_model.LinearRegression())
-    k_ = 100
+    k_ = 500
     threshold = 20
     min_error_config, max_pnl_config, max_score_config = main(
         algos,
         k_range=(k_, k_+1),
-        n_range=(13, 25),
+        n_range=(16, 19),
+        p_min_max=(1, 3),
         threshold=threshold
     )
     print()
@@ -145,8 +146,8 @@ if __name__ == '__main__':
     print(max_score_config)
     print(time.time() - b)
     """
-((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 100, 17, 17), (0.0, 1.0, 1.1330788159587731e-14))
-((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 100, 18, 1), (290.7919033467226, 0.8783096995842847, 9.329948278933688))
-((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 100, 13, 13), (0.0, 1.0, 5.867989854708028e-14))
-212.4928629398346
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 18, 3), (164.99640197986272, 0.8412303659451217, 0.681274343213808))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 17, 1), (305.8974303151021, 0.9221249609973433, 0.7993760785098551))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 17, 3), (220.20503289389026, 0.947419814773046, 0.9739339300082697))
+46.192710876464844
     """
