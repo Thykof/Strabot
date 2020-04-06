@@ -13,10 +13,9 @@ def raw_data_to_numeric(raw_data):
     data = data.replace(',', '.')
     return float(data)
 
-def split_df(df, test_size=0.2):
-    n = df.shape[1]
-    x = df.iloc[:,:n-1]
-    y = df.iloc[:,n-1]
+def split_df(df, p, test_size=0.2):
+    x = df.iloc[:,:p]
+    y = df.iloc[:,df.shape[1]-1]
     return train_test_split(x, y, test_size=test_size)
 
 def evaluate(df_tuple, model, threshold):
@@ -59,17 +58,12 @@ def evaluate(df_tuple, model, threshold):
         average_sell_price = 0
         return 0, tot_error / n
 
-def train_algo(algo, k, n, threshold):
+def train_algo(df, algo, k, n, p, threshold):
     """
     Create row of n days.
     Train and test k models.
     """
-    algo_name = str(algo)[:str(algo).find('(')]
-    df = pandas.read_csv("bitcoin-price-all.csv", sep=';')
-    # df = df.loc[:99]
-    df = df[['Close**']]
-    df = df.applymap(raw_data_to_numeric)
-    new_df_list = list()
+    df_list = list()
     # create rows with n close price, i.e. n days
     for label, content in df.items():
         row = list()
@@ -78,44 +72,39 @@ def train_algo(algo, k, n, threshold):
             row.append(item)
             i += 1
             if i >= n:
-                new_df_list.append(row)
-                # plt.plot(row)
-                # plt.show()
-                # input()
+                df_list.append(row)
+                # plt.plot(row); plt.show(); input()
                 row = list()
                 i = 0
-    new_df = pandas.DataFrame(new_df_list)
+    df = pandas.DataFrame(df_list)
 
     tot_pnl = int() # total profit and loss
     tot_score = int()
     tot_error = int()
     # train several models
     for i in range(k):
-        x_train, x_test, y_train, y_test = split_df(new_df)
+        x_train, x_test, y_train, y_test = split_df(df, p)
         model = algo.fit(x_train, y_train)
         tot_score += model.score(x_test, y_test)
-        # pnl, error = evaluate(new_df, model)
         pnl, error = evaluate((x_test, y_test), model, threshold)
         tot_pnl += pnl
         tot_error = error
     pnl = tot_pnl / k
     score = tot_score / k
     error = tot_error / k
-    # if DEBUG:
-    #     print(algo_name)
-    #     print('pnl:   ' + str(pnl))
-    #     print('score: ' + str(score))
-    #     print('error: ' + str(error))
-    #     print()
-    return algo_name, pnl, score, error
+    return pnl, score, error
 
 def main(algos, k_range=(10, 40), n_range=(4, 100), threshold=50):
     tries = list()
+    df = pandas.read_csv("bitcoin-price-all.csv", sep=';')
+    df = df[['Close**']]
+    df = df.applymap(raw_data_to_numeric)
     for algo in algos:
         for k in range(k_range[0], k_range[1]):
             for n in range(n_range[0], n_range[1]):
-                algo_name, pnl, score, error = train_algo(algo, k, n, threshold)
-                tries.append(((algo, k, n), (algo_name, pnl, score, error)))
+                for p in range(1, n+1):
+                    pnl, score, error = train_algo(df, algo, k, n, p, threshold)
+                    tries.append(((algo, k, n, p), (pnl, score, error)))
 
     max_pnl = 0
     max_pnl_config = None
@@ -124,17 +113,16 @@ def main(algos, k_range=(10, 40), n_range=(4, 100), threshold=50):
     max_score = 0
     max_score_config = None
     for result in tries:
-        if DEBUG:
-            print(result)
-        if max_pnl < result[1][1]:
-            max_pnl = result[1][1]
+        if DEBUG: print(result)
+        if max_pnl < result[1][0]:
+            max_pnl = result[1][0]
             max_pnl_config = result
-        if min_error > result[1][3]:
-            min_error = result[1][3]
-            min_error_config = result
-        if max_score < result[1][2]:
-            max_score = result[1][2]
+        if max_score < result[1][1]:
+            max_score = result[1][1]
             max_score_config = result
+        if min_error > result[1][2]:
+            min_error = result[1][2]
+            min_error_config = result
     return min_error_config, max_pnl_config, max_score_config
 
 if __name__ == '__main__':
@@ -143,17 +131,22 @@ if __name__ == '__main__':
     # n: number of days in each row
     algos = list()
     algos.append(linear_model.LinearRegression())
-    k_ = 50
+    k_ = 100
     threshold = 20
-    min_error_config, max_pnl_config, max_score_config = main(algos, k_range=(k_, k_+1), n_range=(5, 25), threshold=threshold)
+    min_error_config, max_pnl_config, max_score_config = main(
+        algos,
+        k_range=(k_, k_+1),
+        n_range=(13, 25),
+        threshold=threshold
+    )
     print()
     print(min_error_config)
     print(max_pnl_config)
     print(max_score_config)
     print(time.time() - b)
     """
-((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 50, 24), ('LinearRegression', 72.89835528418281, 0.9864903910464595, 1.431114771854653))
-((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 50, 8), ('LinearRegression', 170.68796262633748, 0.9897190268544935, 3.7451735321168513))
-((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 50, 9), ('LinearRegression', 29.91841178805823, 0.9953372053890338, 2.282855057393496))
-13.589125871658325
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 100, 17, 17), (0.0, 1.0, 1.1330788159587731e-14))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 100, 18, 1), (290.7919033467226, 0.8783096995842847, 9.329948278933688))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 100, 13, 13), (0.0, 1.0, 5.867989854708028e-14))
+212.4928629398346
     """
