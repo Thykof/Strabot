@@ -35,14 +35,14 @@ def evaluate(df_tuple, model, threshold):
         # evaluate trade
         if abs(x_decision - prediction) > threshold:
             if prediction > x_decision:
-                # buy
-                buy_prices.append(x_decision)
                 if y > prediction:
+                    # buy
+                    buy_prices.append(x_decision)
                     sell_prices.append(prediction)
             else:
-                # sell
-                sell_prices.append(x_decision)
                 if y < prediction:
+                    # sell
+                    sell_prices.append(x_decision)
                     buy_prices.append(prediction)
 
         # calculate error
@@ -131,12 +131,12 @@ if __name__ == '__main__':
     # n: number of days in each row
     algos = list()
     algos.append(linear_model.LinearRegression())
-    k_ = 500
+    k_ = 100
     threshold = 20
     min_error_config, max_pnl_config, max_score_config = main(
         algos,
         k_range=(k_, k_+1),
-        n_range=(16, 19),
+        n_range=(16, 30),
         p_min_max=(1, 3),
         threshold=threshold
     )
@@ -146,8 +146,8 @@ if __name__ == '__main__':
     print(max_score_config)
     print(time.time() - b)
     """
-((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 18, 3), (164.99640197986272, 0.8412303659451217, 0.681274343213808))
-((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 17, 1), (305.8974303151021, 0.9221249609973433, 0.7993760785098551))
-((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 17, 3), (220.20503289389026, 0.947419814773046, 0.9739339300082697))
-46.192710876464844
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 100, 19, 2), (4.323642607273287, 0.8930297622727139, 2.6431800827043834))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 100, 25, 3), (8.150272323348593, 0.7928069670184378, 7.319230265444584))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 100, 17, 3), (5.0693111566407705, 0.9430695053504877, 4.861001161443709))
+41.236467599868774
     """
