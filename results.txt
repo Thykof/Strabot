@@ -538,3 +538,38 @@
 ((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 200, 23, 11), (13.888349986629589, 0.8883205841161181, 2.7785761887512854))
 ((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 200, 22, 8), (11.249611121075217, 0.9639043330389743, 1.4669923588852265))
 211.64880108833313
+
+
+
+
+
+
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 21, 8), (5.273574435049047, 0.9064758872472237, 0.9968088975651771))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 21, 9), (5.101744644198966, 0.9105936055118746, 0.9934270652428616))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 21, 10), (5.137800023644544, 0.9162392021490827, 0.8774268415281979))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 21, 11), (6.116505894909448, 0.9098111971393791, 2.261742021273883))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 21, 12), (5.665298817061695, 0.9534238315028903, 0.5335961181962994))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 21, 13), (4.974290401436826, 0.9457125353688163, 0.8756443092905202))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 21, 14), (4.432180972391332, 0.9751242715324681, 0.6361658976436149))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 21, 15), (5.150723873961005, 0.9815047339021993, 0.7571837593210322))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 22, 8), (11.543902711248666, 0.9632766571366657, 0.8740228439944524))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 22, 9), (12.671770170443613, 0.9612511075965441, 0.6162258030197985))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 22, 10), (9.087232392116464, 0.9591065780325256, 0.5522877117119791))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 22, 11), (8.123120049977782, 0.9555469738219435, 0.7068170387274766))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 22, 12), (7.521249306588226, 0.9649513695612191, 0.358827331113892))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 22, 13), (7.476384070715574, 0.9576296698516029, 0.9018697892599639))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 22, 14), (4.631177384055178, 0.9550101197505223, 0.5571181968981583))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 22, 15), (4.685550569062132, 0.9578552597201364, 1.394755963436046))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 23, 8), (8.462094626971698, 0.886845750916109, 1.524688841918572))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 23, 9), (11.762748351372116, 0.9148222792574844, 0.5461644312301486))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 23, 10), (10.719245466655018, 0.9036348449466294, 2.1328102340398454))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 23, 11), (14.331677216276224, 0.89445720095303, 2.7835878611451483))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 23, 12), (8.027158986810257, 0.9369583918836786, 0.6153135644192237))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 23, 13), (6.8828522614069385, 0.9247116369096603, 0.9853972324294877))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 23, 14), (6.689747436612368, 0.9283058877751439, 1.113679290280552))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 23, 15), (7.017051624765759, 0.9342254892859622, 0.6823750459738385))
+
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 22, 12), (7.521249306588226, 0.9649513695612191, 0.358827331113892))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 23, 11), (14.331677216276224, 0.89445720095303, 2.7835878611451483))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 21, 15), (5.150723873961005, 0.9815047339021993, 0.7571837593210322))
+107.42558312416077

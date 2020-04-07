@@ -131,14 +131,14 @@ if __name__ == '__main__':
     # n: number of days in each row
     algos = list()
     algos.append(linear_model.LinearRegression())
-    algos.append(linear_model.LinearRegression())
-    k_ = 200
+    # algos.append(linear_model.LinearRegression())
+    k_ = 500
     threshold = 20
     min_error_config, max_pnl_config, max_score_config = main(
         algos,
         k_range=(k_, k_+1),
-        n_range=(20, 26),
-        p_min_max=(2, 11),
+        n_range=(21, 24),
+        p_min_max=(8, 15),
         threshold=threshold
     )
     print()
@@ -147,8 +147,8 @@ if __name__ == '__main__':
     print(max_score_config)
     print(time.time() - b)
     """
-((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 200, 23, 11), (12.506731817520047, 0.8870504256914784, 1.0932851105155814))
-((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 200, 23, 11), (13.888349986629589, 0.8883205841161181, 2.7785761887512854))
-((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 200, 22, 8), (11.249611121075217, 0.9639043330389743, 1.4669923588852265))
-211.64880108833313
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 22, 12), (7.521249306588226, 0.9649513695612191, 0.358827331113892))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 23, 11), (14.331677216276224, 0.89445720095303, 2.7835878611451483))
+((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 21, 15), (5.150723873961005, 0.9815047339021993, 0.7571837593210322))
+107.42558312416077
     """
