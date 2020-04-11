@@ -2,3 +2,5 @@ numpy
 matplotlib
 scipy
 hitbtc
+scikit-learn
+pandas
