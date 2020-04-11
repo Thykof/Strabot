@@ -92,7 +92,7 @@ def train_algo(df, algo, k, n, p, threshold):
     error = tot_error / k
     return pnl, score, error
 
-def main(algos, k_range=(10, 40), n_range=(4, 100), p_min_max=None, threshold=50):
+def main(algos, k_range=(10, 40), n_range=(4, 100), p_min_max=None, threshold=3):
     tries = list()
     df = pandas.read_csv("bitcoin-price-all.csv", sep=';')
     df = df[['Close**']]
@@ -132,13 +132,13 @@ if __name__ == '__main__':
     algos = list()
     algos.append(linear_model.LinearRegression())
     # algos.append(linear_model.LinearRegression())
-    k_ = 500
-    threshold = 20
+    k_ = 100
+    threshold = 50 # %
     min_error_config, max_pnl_config, max_score_config = main(
         algos,
         k_range=(k_, k_+1),
-        n_range=(21, 24),
-        p_min_max=(8, 15),
+        n_range=(15, 101),
+        p_min_max=None,
         threshold=threshold
     )
     print()
@@ -147,8 +147,4 @@ if __name__ == '__main__':
     print(max_score_config)
     print(time.time() - b)
     """
-((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 22, 12), (7.521249306588226, 0.9649513695612191, 0.358827331113892))
-((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 23, 11), (14.331677216276224, 0.89445720095303, 2.7835878611451483))
-((LinearRegression(copy_X=True, fit_intercept=True, n_jobs=None, normalize=False), 500, 21, 15), (5.150723873961005, 0.9815047339021993, 0.7571837593210322))
-107.42558312416077
     """
