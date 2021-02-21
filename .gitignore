@@ -1,7 +1,6 @@
 env
 private.py
 
-data/
 examples/
 
 .ipynb_checkpoints
