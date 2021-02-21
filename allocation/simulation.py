@@ -38,11 +38,11 @@ def re_allocate():
 def get_distribution(btc, eur, price):
     return round(eur / (btc * price), 5)
 
-def find_amount_to_spend(btc, eur, price, distribution, frequency):
-    amount_eur_to_spend = 1
+def find_amount_to_spend(btc, eur, price, distribution, frequency, step):
+    amount_eur_to_spend = step
     d = (eur - amount_eur_to_spend)  / (btc * price)
-    while d > distribution:
-        amount_eur_to_spend += 1
+    while d > distribution and d > 0:
+        amount_eur_to_spend += step
         # print("amount_eur_to_spend", amount_eur_to_spend)
         d = (eur - amount_eur_to_spend)  / (btc * price)
         # print("d", d)
@@ -50,11 +50,11 @@ def find_amount_to_spend(btc, eur, price, distribution, frequency):
             break
     return amount_eur_to_spend
 
-def find_amount_to_get(btc, eur, price, distribution, frequency):
-    amount_eur_to_get = 1
+def find_amount_to_get(btc, eur, price, distribution, frequency, step):
+    amount_eur_to_get = step
     d = (eur + amount_eur_to_get)  / (btc * price)
-    while d < distribution:
-        amount_eur_to_get += 1
+    while d < distribution and d > 0:
+        amount_eur_to_get += step
         # print("amount_eur_to_get", amount_eur_to_get)
         d = (eur + amount_eur_to_get)  / (btc * price)
         # print('d', d)
@@ -62,8 +62,8 @@ def find_amount_to_get(btc, eur, price, distribution, frequency):
             break
     return amount_eur_to_get
 
-def simulate(btc, eur, distribution, frequency):
-    prices = get_prices()[:1100]
+def simulate(btc, eur, distribution, frequency, step):
+    prices = get_prices()[:1000]
     prices.reverse()
     values = list()
     for n, price in enumerate(prices):
@@ -73,13 +73,13 @@ def simulate(btc, eur, distribution, frequency):
             # print("d 73", d)
             if d > distribution:
                 # buy some btc
-                amount_eur_to_spend = find_amount_to_spend(btc, eur, price, distribution, frequency)
+                amount_eur_to_spend = find_amount_to_spend(btc, eur, price, distribution, frequency, step)
                 eur -= amount_eur_to_spend
                 btc += amount_eur_to_spend / price
                 # print(f'buy for {amount_eur_to_spend} eur')
             else:
                 # sell some btc
-                amount_eur_to_get = find_amount_to_get(btc, eur, price, distribution, frequency)
+                amount_eur_to_get = find_amount_to_get(btc, eur, price, distribution, frequency, step)
                 eur += amount_eur_to_get
                 btc -= amount_eur_to_get / price
                 # print(f'sell for {amount_eur_to_get} eur')
@@ -90,11 +90,15 @@ def simulate(btc, eur, distribution, frequency):
     return values
 
 if __name__ == '__main__':
+    """
+    Note that each time we calculate if we need to reallocate, a trade is made,
+    even though we need to trade 1 €, we may trade `step` € (i.e. 80).
+    """
     # r = global_values(0.046, 20)
-    # r = simulate(0.04645, 20.22, 0.036, 2)
-    # for r_ in r:
-    #     print(r_)
+    r = simulate(0.04645, 20.22, 0.01, 1, 80)
+    print(r[-1])
 
-    for i in range(1, 60):
-        r = simulate(0.04645, 20.22, 0.036, i)
-        print(i, str(r[-1]).replace(".", ","))
+    # for i in range(1, 100):
+    #     r = simulate(0.045601, 20.22, i/1000, 1, 80)
+    #     # print(r)
+    #     print(i, str(r[-1]).replace(".", ","))
